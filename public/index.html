@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dishes App</title>
+</head>
+<body>
+  <h1>Dishes</h1>
+
+  <form id="dishForm">
+    <input name="name" placeholder="Name" required />
+    <input name="ingredients" placeholder="Ingredients (comma-separated)" required />
+    <input name="preparationSteps" placeholder="Steps (comma-separated)" required />
+    <input name="cookingTime" placeholder="Cooking Time" required />
+    <input name="origin" placeholder="Origin" required />
+    <input name="spiceLevel" placeholder="Spice Level" required />
+    <button type="submit">Add Dish</button>
+  </form>
+
+  <h2>All Dishes</h2>
+  <ul id="dishList"></ul>
+
+  <script>
+    async function loadDishes() {
+      const res = await fetch('/api/dishes');
+      const data = await res.json();
+      const list = document.getElementById('dishList');
+      list.innerHTML = '';
+      data.forEach(dish => {
+        const item = document.createElement('li');
+        item.textContent = `${dish.name} (${dish.spiceLevel}) - ${dish.origin}`;
+        const del = document.createElement('button');
+        del.textContent = 'Delete';
+        del.onclick = async () => {
+          await fetch('/api/dishes/' + dish._id, { method: 'DELETE' });
+          loadDishes();
+        };
+        item.appendChild(del);
+        list.appendChild(item);
+      });
+    }
+
+    document.getElementById('dishForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const form = e.target;
+      const newDish = {
+        name: form.name.value,
+        ingredients: form.ingredients.value.split(','),
+        preparationSteps: form.preparationSteps.value.split(','),
+        cookingTime: form.cookingTime.value,
+        origin: form.origin.value,
+        spiceLevel: form.spiceLevel.value
+      };
+      await fetch('/api/dishes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newDish)
+      });
+      form.reset();
+      loadDishes();
+    });
+
+    loadDishes();
+  </script>
+</body>
+</html>
+
