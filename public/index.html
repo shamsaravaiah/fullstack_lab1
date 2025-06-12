@@ -1,66 +1,113 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Dishes App</title>
+  <meta charset="UTF-8">
+  <title>Dish Recipes</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    form input, form button { margin-top: 10px; display: block; width: 300px; padding: 6px; }
+    .error { color: red; font-weight: bold; }
+  </style>
 </head>
 <body>
-  <h1>Dishes</h1>
+  <h1>Recipe List</h1>
+  <table id="dishTable">
+    <tr>
+      <th>Name</th>
+      <th>Ingredients</th>
+      <th>Steps</th>
+      <th>Cooking Time</th>
+      <th>Origin</th>
+      <th>Spice Level</th>
+      <th>Actions</th>
+    </tr>
+  </table>
 
+  <h2>Add New Dish</h2>
   <form id="dishForm">
-    <input name="name" placeholder="Name" required />
-    <input name="ingredients" placeholder="Ingredients (comma-separated)" required />
-    <input name="preparationSteps" placeholder="Steps (comma-separated)" required />
-    <input name="cookingTime" placeholder="Cooking Time" required />
-    <input name="origin" placeholder="Origin" required />
-    <input name="spiceLevel" placeholder="Spice Level" required />
+    <input name="name" placeholder="Name" required>
+    <input name="ingredients" placeholder="Ingredients (comma-separated)" required>
+    <input name="preparationSteps" placeholder="Steps (comma-separated)" required>
+    <input name="cookingTime" type="number" placeholder="Time (mins)" required>
+    <input name="origin" placeholder="Origin" required>
+    <input name="spiceLevel" placeholder="Spice Level">
     <button type="submit">Add Dish</button>
+    <p id="formError" class="error"></p>
   </form>
-
-  <h2>All Dishes</h2>
-  <ul id="dishList"></ul>
 
   <script>
     async function loadDishes() {
       const res = await fetch('/api/dishes');
       const data = await res.json();
-      const list = document.getElementById('dishList');
-      list.innerHTML = '';
-      data.forEach(dish => {
-        const item = document.createElement('li');
-        item.textContent = `${dish.name} (${dish.spiceLevel}) - ${dish.origin}`;
-        const del = document.createElement('button');
-        del.textContent = 'Delete';
-        del.onclick = async () => {
-          await fetch('/api/dishes/' + dish._id, { method: 'DELETE' });
-          loadDishes();
-        };
-        item.appendChild(del);
-        list.appendChild(item);
+      const table = document.getElementById('dishTable');
+      table.innerHTML = `
+        <tr>
+          <th>Name</th>
+          <th>Ingredients</th>
+          <th>Steps</th>
+          <th>Cooking Time</th>
+          <th>Origin</th>
+          <th>Spice Level</th>
+          <th>Actions</th>
+        </tr>`;
+      data.forEach(d => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${d.name}</td>
+          <td>${d.ingredients.join(', ')}</td>
+          <td>${d.preparationSteps.join(', ')}</td>
+          <td>${d.cookingTime} min</td>
+          <td>${d.origin}</td>
+          <td>${d.spiceLevel}</td>
+          <td><button onclick="deleteDish('${d._id}')">Delete</button></td>`;
+        table.appendChild(row);
       });
     }
 
-    document.getElementById('dishForm').addEventListener('submit', async e => {
+    async function deleteDish(id) {
+      if (confirm("Are you sure you want to delete this dish?")) {
+        await fetch(`/api/dishes/${id}`, { method: 'DELETE' });
+        loadDishes();
+      }
+    }
+
+    document.getElementById('dishForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
-      const newDish = {
-        name: form.name.value,
-        ingredients: form.ingredients.value.split(','),
-        preparationSteps: form.preparationSteps.value.split(','),
-        cookingTime: form.cookingTime.value,
-        origin: form.origin.value,
-        spiceLevel: form.spiceLevel.value
+      const errorEl = document.getElementById('formError');
+      errorEl.textContent = '';
+
+      const body = {
+        name: form.name.value.trim(),
+        ingredients: form.ingredients.value.split(',').map(s => s.trim()),
+        preparationSteps: form.preparationSteps.value.split(',').map(s => s.trim()),
+        cookingTime: parseInt(form.cookingTime.value),
+        origin: form.origin.value.trim(),
+        spiceLevel: form.spiceLevel.value.trim()
       };
-      await fetch('/api/dishes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newDish)
-      });
-      form.reset();
-      loadDishes();
+
+      try {
+        const res = await fetch('/api/dishes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          errorEl.textContent = "❌ Error: " + (err.error || err.message || "Something went wrong");
+        } else {
+          form.reset();
+          loadDishes();
+        }
+      } catch (e) {
+        errorEl.textContent = "❌ Failed to submit: " + e.message;
+      }
     });
 
     loadDishes();
   </script>
 </body>
 </html>
-
