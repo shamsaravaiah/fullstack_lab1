@@ -1,18 +1,25 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const dishRoutes = require('./routes/dishes');
+const path = require('path');
 
-dotenv.config();
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Middleware
 app.use(express.json());
-app.use(express.static('public'));
-app.use('/api/dishes', dishRoutes);
 
-// Database connection
-mongoose.connect(process.env.CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => app.listen(process.env.PORT, () => console.log(`Server running on port ${process.env.PORT}`)))
-  .catch(err => console.log(err.message));
+// Serve static files from "public" folder
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Routes
+app.use('/api/dishes', require('./routes/dishes'));
+
+// MongoDB Connection
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});
